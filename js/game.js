@@ -111,19 +111,18 @@ let runnerKey = loadRunnerKey();   // manual pick, persisted in localStorage
 let runnerGen = 0;                 // guards async avatar swaps
 let avatar = buildCharacter(style);
 scene.add(avatar.group);
+let avatarMode = 'guest'; // 'guest' (Styloos runner or procedural fallback) | 'signedIn' (start.ng character)
 
 function setStyle(next) {
   const merged = { ...DEFAULT_STYLE, ...(next || {}) };
   const key = JSON.stringify(merged);
-  if (key === styleKey) return;
+  if (key === styleKey && avatarMode === 'signedIn') return;
   style = merged; styleKey = key;
-  // start.ng style only recolors the procedural fallback avatar; it never
-  // replaces the manually selected Styloos runner (see refreshPlayer).
-  if (!avatar.runnerKey) {
-    scene.remove(avatar.group); avatar.dispose();
-    avatar = buildCharacter(style);
-    scene.add(avatar.group);
-  }
+  scene.remove(avatar.group); avatar.dispose();
+  avatar = buildCharacter(style);
+  avatar.runnerKey = null;
+  scene.add(avatar.group);
+  avatarMode = 'signedIn';
 }
 
 // Swap the visible runner. Async: keeps the current avatar visible while the
@@ -146,19 +145,40 @@ async function setRunner(key, { persist = true } = {}) {
     const nm = document.getElementById('chooseName');
     if (nm) nm.textContent = (RUNNERS.find((r) => r.key === key) || {}).name || key;
   }
-  if (prevKey === key && avatar.runnerKey === key) return true;
+  if (avatarMode === 'signedIn') return true;  // start.ng character stays active for signed-in players
+  if (prevKey === key && avatar.runnerKey === key && avatarMode === 'guest') return true;
   try {
     const next = await buildRunnerAvatar(key);
-    if (gen !== runnerGen) { next.dispose(); return false; }  // superseded
-    scene.remove(avatar.group);
-    try { avatar.dispose(); } catch { /* ignore */ }
-    avatar = next;
-    scene.add(avatar.group);
-    avatar.group.position.set(P.x, P.y, P.z);
-    avatar.group.rotation.y = P.heading;
-    return true;
+    if (gen !== runnerGen) { if (next) next.dispose(); return false; }  // superseded
+    if (next) {
+      scene.remove(avatar.group);
+      try { avatar.dispose(); } catch { /* ignore */ }
+      avatar = next;
+      scene.add(avatar.group);
+      avatar.group.position.set(P.x, P.y, P.z);
+      avatar.group.rotation.y = P.heading;
+      avatarMode = 'guest';
+      return true;
+    } else {
+      // GLB failed to load — fall back to procedural character so the player
+      // is never invisible and gameplay can still start.
+      console.warn(`Runner "${key}" GLB unavailable, using procedural fallback`);
+      style = { ...DEFAULT_STYLE }; styleKey = JSON.stringify(style);
+      scene.remove(avatar.group); avatar.dispose();
+      avatar = buildCharacter(style);
+      avatar.runnerKey = null;
+      scene.add(avatar.group);
+      avatarMode = 'guest';
+      return false;
+    }
   } catch (err) {
-    console.warn(`Runner "${key}" failed to load, keeping current avatar:`, err);
+    console.warn(`Runner "${key}" failed, using procedural fallback:`, err);
+    style = { ...DEFAULT_STYLE }; styleKey = JSON.stringify(style);
+    scene.remove(avatar.group); avatar.dispose();
+    avatar = buildCharacter(style);
+    avatar.runnerKey = null;
+    scene.add(avatar.group);
+    avatarMode = 'guest';
     return false;
   }
 }
@@ -307,11 +327,13 @@ async function refreshPlayer() {
     if (reply) playerInfo = { user: reply.user || null, guest: reply.guest || null };
     const who = playerInfo.user ?? playerInfo.guest;
     const signedIn = !!playerInfo.user;
-    // Manual runner pick always wins for the 3D avatar: start.ng only updates
-    // the profile card/leaderboard identity + the procedural fallback colors.
-    // (CONFLICT doc: start.ng has no Styloos concept; its style maps to the
-    // procedural fallback via setStyle, which no-ops while a GLB is active.)
-    setStyle(who?.style);
+    // Signed-in players use their start.ng character (procedural, from who.style).
+    // Guests keep their selected Styloos runner (GLB, with procedural fallback).
+    if (signedIn) {
+      setStyle(who?.style);
+    } else {
+      await setRunner(runnerKey, { persist: false });
+    }
     $('player-name').textContent = who?.name || 'Guest';
     $('player-account').textContent = playerInfo.user?.account ? `@${playerInfo.user.account}` : 'Not signed in';
     if (who?.face) $('player-face').src = who.face; else $('player-face').removeAttribute('src');

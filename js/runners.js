@@ -71,14 +71,18 @@ function loadGltf(key) {
       const buf = await res.arrayBuffer();
       return await new Promise((resolve, reject) =>
         loader.parse(buf, '', resolve, reject));
-    })().catch((err) => { gltfCache.delete(key); throw err; }));
+    }));
   }
   return gltfCache.get(key);
 }
 
 export async function buildRunnerAvatar(key) {
   if (!isRunnerKey(key)) key = 'student';
-  const gltf = await loadGltf(key);
+  let gltf;
+  try { gltf = await loadGltf(key); } catch (err) {
+    console.warn(`Runner "${key}" failed to load, procedural fallback will be used:`, err);
+    return null;
+  }
   const group = new THREE.Group();
   group.name = 'runner-' + key;
   const pivot = new THREE.Group();
