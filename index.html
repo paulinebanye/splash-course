@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="preload" as="image" href="./assets/splash-course.webp">
 <title>Splash Course — start.ng</title>
 <meta name="theme-color" content="#2b86ff">
 <style>
@@ -87,7 +88,7 @@
   #boardWrap { margin-top:10px; }
 
   /* ---------- main menu (full-screen artwork + bottom controls) */
-  #menu { background-image:url('./assets/splash-course.png'); background-size:cover; background-position:center; background-repeat:no-repeat; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding:0 24px 60px 24px; }
+  #menu { background-image:url('./assets/splash-course.webp'); background-size:cover; background-position:center; background-repeat:no-repeat; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding:0 24px 60px 24px; }
   #menu .card { display:none; }
   .menu-ctrls { display:flex; flex-direction:column; align-items:center; width:100%; max-width:900px; }
   #playBtn { font-size:clamp(24px,5vw,36px); font-weight:900; font-style:italic; text-transform:uppercase; padding:22px 70px; border-radius:40px; border:4px solid #fff; background:linear-gradient(135deg,#ff8c42 0%,#ff6a2b 100%); color:#fff; box-shadow:0 8px 0 #a02f06, 0 0 40px rgba(255,138,61,.6); animation:playPulse 2.2s ease-in-out infinite; display:flex; align-items:center; gap:12px; margin-bottom:16px; min-width:320px; max-width:520px; width:fit-content; }
