@@ -338,6 +338,7 @@ async function refreshPlayer() {
     $('player-account').textContent = playerInfo.user?.account ? `@${playerInfo.user.account}` : 'Not signed in';
     if (who?.face) $('player-face').src = who.face; else $('player-face').removeAttribute('src');
     $('player-sign-in').hidden = signedIn;
+    $('menuSignInSection').hidden = signedIn;
     $('player-card').hidden = false;
     $('signBtn').hidden = signedIn;
     // Guest/offline hint only — never claim a "default character", since the
