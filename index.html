@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Splash Course — start.ng</title>
+<meta name="theme-color" content="#2b86ff">
+<style>
+  :root { --ink:#1b1d3a; --blue:#2b86ff; --orange:#ff6a2b; --lime:#d8fd71; --panel:rgba(30,40,90,.82); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#7cc4ff; font-family:"Trebuchet MS","Arial Rounded MT Bold",Arial,sans-serif; color:#fff; user-select:none; -webkit-user-select:none; touch-action:none; }
+  canvas#c { position:fixed; inset:0; width:100%; height:100%; display:block; outline:none; }
+  .hidden { display:none !important; }
+
+  /* ---------- HUD */
+  #hud { position:fixed; inset:0; pointer-events:none; }
+  .panel { position:absolute; background:linear-gradient(#3a4a8f,#222c64); border:3px solid #fff; border-radius:14px; padding:6px 14px; box-shadow:0 4px 0 rgba(0,0,0,.25); transform:skewX(-6deg); }
+  .panel .label { font-size:11px; letter-spacing:.14em; opacity:.8; display:block; font-weight:700; }
+  .panel .val { font-size:26px; font-weight:900; font-style:italic; font-variant-numeric:tabular-nums; }
+  #timer { top:84px; left:14px; min-width:150px; }
+  #timer .val { font-size:30px; }
+  #timer .target { font-size:16px; color:#ffd23a; font-weight:900; font-style:italic; }
+  #scorebox { top:14px; right:14px; text-align:right; min-width:150px; }
+  #scorebox .val { color:#7dff7a; font-size:34px; }
+  #scorebox small { display:block; color:#ffd23a; font-weight:700; }
+  #section { position:absolute; top:14px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.35); padding:6px 18px; border-radius:999px; font-weight:800; letter-spacing:.06em; font-size:15px; white-space:nowrap; }
+  #progress { position:absolute; left:50%; bottom:16px; width:min(520px,70vw); height:12px; transform:translateX(-50%); background:rgba(0,0,0,.35); border-radius:999px; overflow:hidden; border:2px solid #fff; }
+  #progfill { display:block; height:100%; width:0%; background:linear-gradient(90deg,#ffd23a,#ff6a2b); }
+  #pauseBtn, #muteBtn { position:absolute; pointer-events:auto; right:14px; width:46px; height:46px; border-radius:50%; border:3px solid #fff; background:#222c64; color:#fff; font-size:18px; font-weight:900; cursor:pointer; }
+  #pauseBtn { top:112px; } #muteBtn { top:166px; }
+
+  /* ---------- profile card (start.ng character rule) */
+  /* ---------- start.ng guest pill (top-left, matches reference) */
+  #player-card { position:fixed; top:24px; left:24px; background:rgba(10,15,30,.88); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.18); border-radius:34px; padding:10px 20px 10px 14px; display:flex; align-items:center; gap:14px; z-index:25; min-height:50px; }
+  #player-face { display:none; }
+  .guest-dot { width:30px; height:30px; background:#7ed321; border-radius:50%; flex-shrink:0; box-shadow:0 0 14px rgba(126,211,33,.55); }
+  .guest-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .guest-name { font-weight:900; font-size:16px; color:#fff; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .guest-status { font-size:13px; color:rgba(255,255,255,.88); line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #player-sign-in { background:#7ed321; color:#1a1a1a; border:none; border-radius:22px; padding:7px 18px; font-weight:900; font-size:14px; cursor:pointer; margin-left:auto; flex-shrink:0; white-space:nowrap; }
+
+  /* ---------- floating texts */
+  #popups { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:4; }
+  .pop { position:absolute; transform:translate(-50%,-50%); font-weight:900; font-style:italic; font-size:44px; color:#7dff7a; -webkit-text-stroke:2px #14316b; paint-order:stroke fill; text-shadow:0 4px 0 #14316b; animation:pop 1.3s ease-out forwards; white-space:nowrap; }
+  .pop small { font-size:.62em; color:#fff; margin-left:6px; }
+  .pop.bad { color:#ff9a3d; }
+  .pop.small { font-size:26px; color:#ffd23a; }
+  @keyframes pop { 0%{opacity:0; transform:translate(-50%,-30%) scale(.4) rotate(-8deg);} 15%{opacity:1; transform:translate(-50%,-60%) scale(1.15) rotate(-4deg);} 70%{opacity:1;} 100%{opacity:0; transform:translate(-50%,-150%) scale(1) rotate(-4deg);} }
+  #big { position:fixed; left:50%; top:34%; transform:translate(-50%,-50%); font-size:min(24vw,150px); font-weight:900; font-style:italic; color:#fff; -webkit-text-stroke:4px #14316b; paint-order:stroke fill; text-shadow:0 8px 0 #14316b; z-index:4; pointer-events:none; text-align:center; opacity:0; }
+  #big.show { animation:big .8s ease-out forwards; }
+  @keyframes big { 0%{opacity:0; transform:translate(-50%,-50%) scale(2);} 25%{opacity:1; transform:translate(-50%,-50%) scale(1);} 80%{opacity:1;} 100%{opacity:0; transform:translate(-50%,-50%) scale(.8);} }
+  /* ---------- motivational cheer (upper-center HUD, replaces in-world banners) */
+  #cheer { position:absolute; top:15%; left:50%; transform:translate(-50%,-50%) scale(.85); font-weight:900; font-style:italic; font-size:clamp(22px,4.6vw,40px); color:#ffd23a; -webkit-text-stroke:2px #14316b; paint-order:stroke fill; text-shadow:0 4px 0 #14316b; white-space:nowrap; opacity:0; transition:opacity .35s ease, transform .35s ease; pointer-events:none; }
+  #cheer.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  #fade { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; transition:opacity .35s; z-index:6; }
+
+  /* ---------- screens */
+  .screen { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:10; padding:16px; overflow:auto; }
+  #menu { background:radial-gradient(ellipse at 50% 30%, rgba(20,60,140,.15), rgba(10,20,70,.6)); }
+  #results, #pause { background:rgba(10,20,70,.55); }
+  .card { background:linear-gradient(#35479b,#1f2b66); border:4px solid #fff; border-radius:26px; padding:22px 26px; width:min(560px,100%); text-align:center; box-shadow:0 10px 0 rgba(0,0,0,.28); max-height:100%; overflow:auto; }
+  h1 { margin:0 0 4px; font-size:clamp(40px,10vw,68px); line-height:.95; font-style:italic; font-weight:900; text-transform:uppercase; color:#fff; -webkit-text-stroke:3px var(--ink); paint-order:stroke fill; text-shadow:0 6px 0 var(--ink); }
+  h1 em { color:#ffd23a; font-style:italic; }
+  h2 { margin:0 0 10px; font-size:34px; font-style:italic; font-weight:900; text-transform:uppercase; }
+  .sub { opacity:.9; margin:6px 0 16px; }
+  .btn { display:inline-block; margin:6px; padding:12px 26px; border-radius:16px; border:3px solid #fff; background:linear-gradient(#ff8a3d,#ff5a1f); color:#fff; font:900 22px "Trebuchet MS",Arial,sans-serif; font-style:italic; text-transform:uppercase; cursor:pointer; box-shadow:0 5px 0 #a02f06; }
+  .btn:active { transform:translateY(3px); box-shadow:0 2px 0 #a02f06; }
+  .btn.alt { background:linear-gradient(#4aa0ff,#2b6fe0); box-shadow:0 5px 0 #16409a; font-size:17px; padding:9px 18px; }
+  .keys { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; text-align:left; font-size:14px; margin:10px auto 6px; max-width:340px; opacity:.95; }
+  .keys b { color:#ffd23a; }
+  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:12px 0; }
+  .stat { background:rgba(0,0,0,.25); border-radius:12px; padding:8px; }
+  .stat span { display:block; font-size:11px; letter-spacing:.12em; opacity:.8; }
+  .stat b { font-size:24px; font-style:italic; }
+  .big-score { font-size:56px; font-weight:900; font-style:italic; color:#7dff7a; -webkit-text-stroke:2px #14316b; paint-order:stroke fill; }
+  #saveMsg { min-height:22px; margin:4px 0; font-weight:700; color:#ffd23a; }
+  /* ---------- results screen: big legible actions, stacked on narrow */
+  .results-primary, .results-secondary { display:flex; align-items:center; justify-content:center; gap:.4em;
+    min-height:58px; font-size:clamp(18px,4.6vw,22px); padding:13px 30px; margin:6px auto; width:min(340px,92%); }
+  .results-secondary { min-height:52px; font-size:clamp(16px,4vw,19px); }
+  #results .card { max-height:96vh; overflow:auto; }
+  ol.board { list-style:none; margin:8px 0; padding:0; text-align:left; }
+  ol.board li { display:grid; grid-template-columns:34px 1fr auto auto; gap:8px; padding:6px 10px; border-radius:10px; background:rgba(0,0,0,.2); margin:3px 0; font-weight:700; font-size:15px; align-items:center; }
+  ol.board li.me { background:#d8fd71; color:#222; }
+  ol.board li .n { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  ol.board li .t { opacity:.75; font-weight:600; font-size:13px; }
+  #boardWrap { margin-top:10px; }
+
+  /* ---------- main menu (full-screen artwork + bottom controls) */
+  #menu { background-image:url('./assets/splash-course.png'); background-size:cover; background-position:center; background-repeat:no-repeat; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding:0 24px 60px 24px; }
+  #menu .card { display:none; }
+  .menu-ctrls { display:flex; flex-direction:column; align-items:center; width:100%; max-width:900px; }
+  #playBtn { font-size:clamp(24px,5vw,36px); font-weight:900; font-style:italic; text-transform:uppercase; padding:22px 70px; border-radius:40px; border:4px solid #fff; background:linear-gradient(135deg,#ff8c42 0%,#ff6a2b 100%); color:#fff; box-shadow:0 8px 0 #a02f06, 0 0 40px rgba(255,138,61,.6); animation:playPulse 2.2s ease-in-out infinite; display:flex; align-items:center; gap:12px; margin-bottom:16px; min-width:320px; max-width:520px; width:fit-content; }
+  @keyframes playPulse { 0%,100%{ box-shadow:0 8px 0 #a02f06, 0 0 30px rgba(255,138,61,.45);} 50%{ box-shadow:0 8px 0 #a02f06, 0 0 50px rgba(255,138,61,.75);} }
+  .menu-row { display:flex; gap:14px; justify-content:center; flex-wrap:nowrap; width:100%; margin-bottom:18px; }
+  .menu-row .btn.alt { font-size:clamp(13px,3vw,15px); font-weight:900; padding:16px 24px; border-radius:28px; border-width:3px; background:linear-gradient(135deg,#4aa0ff 0%,#2b86ff 100%); box-shadow:0 5px 0 #16409a; color:#fff; min-width:220px; max-width:280px; display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; }
+  .menu-signin-section { display:flex; flex-direction:column; align-items:center; gap:8px; width:100%; }
+  .menu-signin-line { display:flex; align-items:center; gap:12px; width:100%; max-width:720px; justify-content:center; cursor:pointer; }
+  .menu-signin-line::before,.menu-signin-line::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.45); }
+  .menu-signin-icon { font-size:20px; flex-shrink:0; }
+  .menu-signin-msg { color:#fff; font-size:clamp(12px,2.5vw,14px); text-shadow:0 1px 0 rgba(0,0,0,.6); opacity:.95; flex-shrink:0; text-align:center; }
+  #menuSignInBtn { display:none; }
+  .menu-hint { font-size:clamp(11px,2.5vw,12px); opacity:.85; margin-top:4px; text-align:center; max-width:92vw; text-shadow:0 1px 0 rgba(0,0,0,.5); }
+  #howWrap { margin:8px auto 0; max-width:360px; background:rgba(0,0,0,.25); border-radius:14px; padding:10px 12px; }
+  #boardWrap { margin-top:8px; }
+  .btn svg { vertical-align:-.22em; margin-right:.45em; filter:drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
+  #playBtn svg { margin-right:0; width:1.5em; height:1.5em; }
+
+  /* ---------- touch controls */
+  #touch { position:fixed; inset:0; pointer-events:none; z-index:3; }
+  #joy { position:absolute; left:0; bottom:0; width:55%; height:48%; pointer-events:auto; }
+  #joyBase, #joyKnob { position:absolute; border-radius:50%; display:none; }
+  #joyBase { width:130px; height:130px; background:rgba(255,255,255,.18); border:3px solid rgba(255,255,255,.6); margin:-65px 0 0 -65px; }
+  #joyKnob { width:56px; height:56px; background:rgba(255,255,255,.7); margin:-28px 0 0 -28px; }
+  #jumpBtn { position:absolute; right:22px; bottom:30px; width:98px; height:98px; border-radius:50%; background:rgba(255,106,43,.85); border:4px solid #fff; color:#fff; font:900 18px "Trebuchet MS",Arial,sans-serif; pointer-events:auto; display:flex; align-items:center; justify-content:center; box-shadow:0 5px 0 rgba(0,0,0,.3); }
+  @media (max-height:520px) { .pop{font-size:30px;} #timer{top:72px;} }
+
+  /* ---------- choose-your-runner (fits viewport height; previews auto-scale) */
+  #choose { align-items:center; }
+  #choose .card { width:min(880px,100%); max-height:96vh; display:flex; flex-direction:column; padding:18px 22px; }
+  #choose h2 { margin:0 0 2px; }
+  #chooseGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:10px auto 4px; flex:1 1 auto; min-height:0; width:100%; max-width:640px; }
+  #chooseGrid .choice { background:rgba(0,0,0,.25); border:3px solid rgba(255,255,255,.45); border-radius:16px; padding:8px 6px 8px; cursor:pointer; color:#fff; font:inherit; display:flex; flex-direction:column; justify-content:space-between; }
+  #chooseGrid .choice canvas { width:100%; height:auto; aspect-ratio:3/4; min-height:0; display:block; border-radius:10px; background:radial-gradient(circle at 50% 30%, rgba(255,255,255,.22), rgba(0,0,0,.18)); }
+  #chooseGrid .choice b { display:block; margin:6px 0 0; font-size:13px; font-style:italic; text-align:center; line-height:1.15; }
+  #chooseGrid .choice .st { display:block; font-size:10.5px; opacity:.75; min-height:14px; text-align:center; }
+  #chooseGrid .choice.sel { border-color:#ffd23a; box-shadow:0 0 0 3px #ffd23a, 0 6px 0 rgba(0,0,0,.3); background:rgba(0,0,0,.35); transform:translateY(-2px); }
+  #chooseGrid .choice:focus-visible { outline:3px solid #ffd23a; outline-offset:2px; }
+  #chooseName { font-size:20px; font-weight:900; font-style:italic; color:#ffd23a; min-height:26px; margin:2px 0 0; }
+  #chooseHint { font-size:12px !important; margin:2px 0 4px !important; opacity:.85; }
+  .choose-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:2px 0 0; }
+  .choose-actions .btn { width:auto; min-width:0; max-width:190px; flex:0 1 auto; padding:9px 16px; font-size:15px; }
+  @media (max-width:640px) { #chooseGrid { grid-template-columns:repeat(2,1fr); max-width:400px; } #choose .card { padding:14px; } }
+  @media (max-height:560px) { #choose .card { padding:10px 16px; } #choose h2 { font-size:24px; } #chooseName { font-size:16px; min-height:20px; } #chooseHint { display:none; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="panel" id="timer"><span class="label">TIME</span><span class="val" id="time">0:00.0</span><span class="label">TARGET <span class="target" id="target">2:30</span></span></div>
+  <div class="panel" id="scorebox"><span class="label">SCORE</span><span class="val" id="score">0</span><small id="stars">★ 0 / 0</small></div>
+  <div id="section">START LINE</div>
+  <div id="cheer" aria-live="polite"></div>
+  <div id="progress"><i id="progfill"></i></div>
+  <button id="pauseBtn" aria-label="Pause">❚❚</button>
+  <button id="muteBtn" aria-label="Mute">♪</button>
+</div>
+
+<!-- start.ng profile card: the player's face, character name and @account -->
+<div id="player-card" hidden>
+  <span class="guest-dot" aria-hidden="true"></span>
+  <div class="guest-info">
+    <b id="player-name" class="guest-name">Guest</b>
+    <span id="player-account" class="guest-status">Not signed in</span>
+  </div>
+  <button id="player-sign-in" hidden>Sign in</button>
+  <img id="player-face" alt="">
+</div>
+
+<div id="popups"></div>
+<div id="big"></div>
+<div id="fade"></div>
+
+<div id="touch" class="hidden">
+  <div id="joy"><div id="joyBase"></div><div id="joyKnob"></div></div>
+  <div id="jumpBtn">JUMP</div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="menu-ctrls">
+    <button class="btn" id="playBtn"><svg viewBox="0 0 24 24" width="1.7em" height="1.7em" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg>PLAY!</button>
+    <div class="menu-row">
+      <button class="btn alt" id="chooseBtn"><svg viewBox="0 0 24 24" width="1.4em" height="1.4em" aria-hidden="true"><path d="M14 2c-1.1 0-2 .9-2 2v1c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1V4c0-1.1-.9-2-2-2S5 2.9 5 4v12c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2m-2 12H8v-6l2.5 3.5L11 10l2.5 3.5L16 8z" fill="#fff"/></svg><span>CHOOSE RUNNER</span></button>
+      <button class="btn alt" id="boardBtn"><svg viewBox="0 0 24 24" width="1.4em" height="1.4em" aria-hidden="true"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z" fill="#fff"/></svg><span>LEADERBOARD</span></button>
+      <button class="btn alt" id="howBtn" aria-expanded="false" aria-controls="howWrap"><svg viewBox="0 0 24 24" width="1.4em" height="1.4em" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#fff"/><text x="12" y="16" text-anchor="middle" font-size="14" font-weight="900" fill="#2b86ff">?</text></svg><span>HOW TO PLAY</span></button>
+    </div>
+    <div class="menu-signin-section">
+      <div class="menu-signin-line" role="button" tabindex="0" aria-label="Sign in with start.ng" onclick="SN.signIn()">
+        <span class="menu-signin-icon">🎮</span>
+        <span class="menu-signin-msg">Sign in with start.ng to save your scores and compete on the leaderboard!</span>
+      </div>
+      <button id="menuSignInBtn"></button>
+    </div>
+    <div id="menuHint" class="menu-hint"></div>
+    <div id="howWrap" class="hidden">
+      <div class="keys">
+        <b>Run</b><span>D / → forward, A / ← back</span>
+        <b>Step in / out</b><span>W / ↑ away, S / ↓ toward camera</span>
+        <b>Jump</b><span>Space (tap for a short hop)</span>
+        <b>Pause</b><span>P or Esc</span>
+      </div>
+    </div>
+    <div id="boardWrap" class="hidden"><ol class="board" id="menuBoard"></ol></div>
+  </div>
+</div>
+<div id="choose" class="screen hidden">
+  <div class="card">
+    <h2>Choose Your Runner</h2>
+    <div id="chooseName" aria-live="polite"></div>
+    <div id="chooseGrid" role="listbox" aria-label="Choose your runner"></div>
+    <div class="sub" id="chooseHint" style="font-size:13px">Tap a runner to preview them on the course, then run!</div>
+    <button class="btn" id="runBtn">Run With This Character</button>
+    <button class="btn alt" id="chooseBackBtn">Back to Menu</button>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="card">
+    <h2>Paused</h2>
+    <button class="btn" id="resumeBtn">Resume</button>
+    <button class="btn alt" id="restartBtn">Restart run</button>
+  </div>
+</div>
+
+<div id="results" class="screen hidden">
+  <div class="card">
+    <h2>Course complete!</h2>
+    <div class="big-score" id="rScore">0</div>
+    <div class="stats">
+      <div class="stat"><span>TIME</span><b id="rTime">0:00</b></div>
+      <div class="stat"><span>STARS</span><b id="rStars">0</b></div>
+      <div class="stat"><span>WIPEOUTS</span><b id="rWipes">0</b></div>
+      <div class="stat"><span>RANK</span><b id="rRank">–</b></div>
+    </div>
+    <div id="saveMsg"></div>
+    <button class="btn results-primary" id="againBtn">↻ Run again</button>
+    <button class="btn alt results-secondary" id="signBtn" hidden>Sign in</button>
+    <ol class="board" id="resBoard"></ol>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.js" } }
+</script>
+<script type="module" src="./js/game.js"></script>
+</body>
+</html>

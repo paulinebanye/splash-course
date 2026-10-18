@@ -1,0 +1,8 @@
+{
+  "leaderboard": {
+    "stats": [
+      { "key": "score", "label": "Score", "order": "highest" },
+      { "key": "time", "label": "Course time", "order": "lowest", "format": "time" }
+    ]
+  }
+}
